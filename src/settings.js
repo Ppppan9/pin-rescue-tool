@@ -1,7 +1,7 @@
 // 拔钉救人核玩工具 —— 设置定义（中文标签），版本号 + 迁移。通用分组 / 键名按 game-toolkit-standard/TOOLKIT_STANDARD.md
 import { h5DeviceSelectOptions } from './h5/index.js';
 export const APP_VERSION = '1.0.0';
-export const SETTINGS_VERSION = 1;
+export const SETTINGS_VERSION = 2;
 export const STORE_KEY = 'pinRescueTool.settings';
 export const APP_ID = 'pin-rescue-tool';
 const ALL8 = 'applovin,facebook,google,mintegral,moloco,tiktok,unity,generic';
@@ -10,8 +10,8 @@ export const GROUPS = [
   ['画布与关卡', [
     ['canvasW', '画布宽度(px)', 'range', 720, 360, 1440, 2],
     ['canvasH', '画布高度(px)', 'range', 1280, 640, 2560, 2],
-    ['timerSec', '倒计时(秒，到 0 压塌；参考≈22.9)', 'range', 22.9, 3, 120, 0.1],
-    ['timerShowOffset', '显示数字提前量(秒，参考≈0.25：1 秒时显示 23)', 'range', 0.25, 0, 1, 0.05],
+    ['timerSec', '倒计时(秒，到 0 压塌；参考≈22.6)', 'range', 22.6, 3, 120, 0.1],
+    ['timerShowOffset', '显示数字提前量(秒，参考≈0.55：1 秒时显示 23)', 'range', 0.55, 0, 1, 0.05],
     ['timerShowAt', '倒计时出现时刻(秒，参考≈0.8 弹出)', 'range', 0.8, 0, 5, 0.05],
     ['pinLayout', '钉子布局（每行一排，字母=颜色：M 品红 R 红 L 黄绿 G 绿 P 紫 B 蓝 Y 黄 O 橙 W 白；. = 无钉）', 'textarea', 'MRLGPB\nRRMMBG\nLPBRGL\nMPLMRG\nGRMGPL'],
     ['boxSeq', '目标盒颜色顺序（逗号分隔，参考：红→黄绿→品红→绿…）', 'text', 'R,L,M,G,P,B,R,M,G'],
@@ -31,6 +31,7 @@ export const GROUPS = [
     ['plankColor', '木板颜色(参考≈#B39B7E)', 'color', '#b89d7d'],
     ['plankDark', '木板描边 / 木纹颜色', 'color', '#4a3326'],
     ['pinR', '钉子半径(px，参考≈22)', 'range', 22, 8, 40, 0.5],
+    ['pinHitR', '点击判定半径(px，手机上手指粗，默认≈半个格距)', 'range', 58, 10, 120, 1],
     ['pinShank', '拔出时露出钉身长度(×半径)', 'range', 1.1, 0, 3, 0.05],
     ['col_M', '品红(参考≈#E035E1)', 'color', '#e035e1'],
     ['col_R', '红(参考≈#D2464E)', 'color', '#d2464e'],
@@ -107,7 +108,9 @@ export const GROUPS = [
     ['failSmoke', '压扁时烟雾团', 'bool', true],
     ['smokeColor', '烟雾颜色', 'color', '#dfe9f6'],
     ['smokeShade', '烟雾暗部', 'color', '#9db3d6'],
-    ['smokeSize', '烟雾大小(px，参考≈190)', 'range', 190, 40, 400, 5],
+    ['smokeX', '烟雾中心 X(px)', 'range', 530, 0, 750, 1],
+    ['smokeY', '烟雾中心 Y(px，参考≈烟团压在小人房间下半)', 'range', 640, 0, 1280, 1],
+    ['smokeSize', '烟雾大小(px，参考≈240)', 'range', 240, 40, 400, 5],
     ['smokeAt', '倒计时到 0 后多久冒烟(秒，参考≈0.3)', 'range', 0.3, 0, 3, 0.05],
     ['failBadgeAfter', '倒计时到 0 后多久弹 FAIL(秒，参考≈1.05)', 'range', 1.05, 0, 6, 0.05],
     ['failBlur', '背景模糊(px，参考明显模糊)', 'range', 10, 0, 40, 0.5],
@@ -156,6 +159,7 @@ export const GROUPS = [
     ['sfxWrongVol', '颜色不对 音量', 'range', 0.7, 0, 2, 0.01],
     ['sfxWood', '木板撞击', 'bool', true],
     ['sfxWoodVol', '木板撞击 音量', 'range', 0.7, 0, 2, 0.01],
+    ['woodImpulse', '木板撞击触发力度(越大越少响)', 'range', 2.5, 0.2, 20, 0.1],
     ['sfxStone', '石头哗啦(循环，随流动)', 'bool', true],
     ['sfxStoneVol', '石头哗啦 音量', 'range', 0.6, 0, 2, 0.01],
     ['sfxTick', '最后 5 秒滴答', 'bool', true],
@@ -246,6 +250,11 @@ export function migrate(obj) {
     mv('handImg', 'handImage'); mv('sfxVol', 'sfxVolume'); mv('sfx', 'sfxMute', x => !x); mv('recTail', 'tailSec', x => Math.round(x / 100) / 10); mv('endText', 'endTitle');
     if (s.h5Format === 'tiktok,google,mintegral,generic') s.h5Format = ALL8;
     v = 1;
+  }
+  if (v < 2) { // v2：失败时机提前到 22.6s（对齐参考压塌帧）、烟雾更大；仅替换仍为旧默认的值
+    const up = (k, o, n) => { if (s[k] === o) s[k] = n; };
+    up('timerSec', 22.9, 22.6); up('timerShowOffset', 0.25, 0.55); up('smokeSize', 190, 240); up('woodImpulse', undefined, 2.5);
+    v = 2;
   }
   for (const nv of Object.keys(OLD_DEFAULTS).map(Number).sort((a, b) => a - b)) if (v < nv) { for (const k in OLD_DEFAULTS[nv]) if (s[k] === OLD_DEFAULTS[nv][k]) delete s[k]; v = nv; }
   const out = { ...DEFS };

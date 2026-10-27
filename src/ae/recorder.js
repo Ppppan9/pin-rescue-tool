@@ -66,11 +66,12 @@ export function createAERecorder(api) {
     for (const g of segs) {
       if (g.tr.z >= 5) pushBlur();
       const a = assetFor(g.tr.asset); if (!a) continue;
+      const tm = g.tr.id.startsWith('stone_') ? 4 : 1; // 石头：几百颗，静止时的物理微抖不记关键帧（误差 ≤1px / 0.8°）
       const fr = resample(g.s), tin = fr.f0 / fps, last = g.s[g.s.length - 1], nextT = rec.frames - 1 > last[6] ? last[0] + 1 / fps : D;
       const tout = Math.min(D, Math.max(tin + 1 / fps, Math.round(nextT * fps) / fps)), k = g.tr.id + '|' + g.tr.asset, n = (segK.get(k) || 0) + 1; segK.set(k, n);
       const L = { name: layerName(g.tr.id, g.tr.asset, zh) + (nSeg.get(k) > 1 ? ` #${n}` : ''), src: { asset: a.id }, in: r4(tin), out: r4(tout), label: LABEL[g.tr.id.split('_')[0]] ?? 15, tr: {
-        anchor: [rnd(a.ax * a.kx), rnd(a.ay * a.ky)], position: prop(fr, e => [e[1] - V.x0, e[2] - V.y0], 0.25), scale: prop(fr, e => [e[3] * 100 / a.kx, e[3] * 100 / a.ky], 0.25),
-        rotation: prop(fr, e => e[4] * 180 / Math.PI, 0.2), opacity: prop(fr, e => Math.max(0, Math.min(100, e[5] * 100)), 0.5) } };
+        anchor: [rnd(a.ax * a.kx), rnd(a.ay * a.ky)], position: prop(fr, e => [e[1] - V.x0, e[2] - V.y0], 0.25 * tm), scale: prop(fr, e => [e[3] * 100 / a.kx, e[3] * 100 / a.ky], 0.25),
+        rotation: prop(fr, e => e[4] * 180 / Math.PI, 0.2 * tm), opacity: prop(fr, e => Math.max(0, Math.min(100, e[5] * 100)), 0.5) } };
       if (g.tr.add) L.blend = 'add'; layers.push(L);
     }
     pushBlur();

@@ -43,7 +43,7 @@ export class Game {
     this.world.on('post-solve', (c, imp) => {
       const a = c.getFixtureA().getBody().getUserData(), b = c.getFixtureB().getBody().getUserData();
       if (this.woodCool > 0 || !imp) return; const ni = imp.normalImpulses ? imp.normalImpulses[0] : 0;
-      if (((a && a.kind === 'plank') || (b && b.kind === 'plank')) && ni > 0.9 && !(a && a.kind === 'stone' && b && b.kind === 'stone')) { this.events.push({ type: 'wood', v: Math.min(1, ni / 6) }); this.woodCool = 0.12; }
+      if (((a && a.kind === 'plank') || (b && b.kind === 'plank')) && ni > this.S.woodImpulse && !(a && a.kind === 'stone' && b && b.kind === 'stone')) { this.events.push({ type: 'wood', v: Math.min(1, ni / 8) }); this.woodCool = 0.22; }
     });
     // 预先沉降（石堆自然堆积；不推进时间轴）
     const steps = Math.round(S.prewarm * 60); for (let i = 0; i < steps; i++) this.physStep(1 / 60, true);
@@ -190,7 +190,7 @@ export class Game {
     if (bx.phase === 'in') { const u = clamp01(pt / S.boxInDur), c1 = 2.2, c3 = c1 + 1; return 0.08 + 0.92 * (1 + c3 * Math.pow(u - 1, 3) + c1 * Math.pow(u - 1, 2)); }
     return 1;
   }
-  pinAt(x, y) { let best = null, bd = 1e9; for (const p of this.pins) if (p.alive) { const d = Math.hypot(p.x - x, p.y - y); if (d < this.S.pinR * 1.45 && d < bd) { bd = d; best = p; } } return best; }
+  pinAt(x, y) { let best = null, bd = 1e9; for (const p of this.pins) if (p.alive) { const d = Math.hypot(p.x - x, p.y - y); if (d < this.S.pinHitR && d < bd) { bd = d; best = p; } } return best; }
   canTake(c) { const bx = this.box; return this.state === 'play' && (bx.phase === 'idle' || bx.phase === 'in') && bx.color === c && bx.reserved < this.S.slotsPerBox; }
   tap(x, y) {
     if (this.state !== 'play') return null; const p = this.pinAt(x, y); if (!p) return null;

@@ -76,7 +76,7 @@ function charPose() {
   return { push, crouch, crush, shiverX: crush ? 0 : Math.sin(t * 47) * S.shiver, t, handTarget: ht };
 }
 function timerScale() { const u = (G.t - S.timerShowAt) / 0.25; return u <= 0 ? 0 : easeBack(u); }
-function smokeState() { if (!S.failSmoke || G.failT == null) return null; const u = (G.t - G.failT - S.smokeAt) / 0.6; if (u <= 0) return null; const v = Math.min(1, u); return { x: 545 - 5 * v, y: 420 + 90 * clamp01((G.t - G.failT - S.smokeAt) / 1.2), u: v, sc: 0.35 + 0.65 * (1 - Math.pow(1 - Math.min(1, u * 2.2), 3)) + 0.25 * clamp01((G.t - G.failT - S.smokeAt - 0.6) / 1.2) }; }
+function smokeState() { if (!S.failSmoke || G.failT == null) return null; const u = (G.t - G.failT - S.smokeAt) / 0.6; if (u <= 0) return null; const v = Math.min(1, u); return { x: S.smokeX - 5 * v, y: S.smokeY + 40 * clamp01((G.t - G.failT - S.smokeAt) / 1.2), u: v, sc: 0.35 + 0.65 * (1 - Math.pow(1 - Math.min(1, u * 2.2), 3)) + 0.25 * clamp01((G.t - G.failT - S.smokeAt - 0.6) / 1.2) }; }
 function blurAmt() { const f = failShowT(); if (f == null) return 0; return S.failBlur * easeOut((G.t - f + 0.05) / 0.35); }
 function pinVisual(p) { let dx = 0; for (const s of G.shakes) if (s.pin === p) { const u = (G.t - s.t0) / 0.4; dx = Math.sin(u * Math.PI * 6) * 6 * (1 - u); } return { x: p.x + dx, y: p.y }; }
 
