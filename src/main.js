@@ -95,7 +95,9 @@ function drawScene(g) {
   for (const f of G.flying) { const q = G.flyPos(f); A.drawPin(g, q.x, q.y, S.pinR, A.colorOf(S, f.c), { s: q.s, shank: q.shank * S.pinShank / 1.1, rot: q.rot }); }
   const sm = smokeState(); if (sm) A.drawSmoke(g, S, sm.x, sm.y, sm.u, 3), 0;
   A.drawTitle(g, S);
-  A.drawTimer(g, S, G.remaining(), G.remaining() / S.timerSec, timerScale());
+  A.drawTimer(g, S, G.shownSec(), G.remaining() / S.timerSec, timerScale());
+  for (let i = ripples.length - 1; i >= 0; i--) { const r = ripples[i], u = (now() - r.t0) / 420; if (u > 1) { ripples.splice(i, 1); continue; } const [a, b2, c] = A.hexRGB(S.rippleColor); g.strokeStyle = `rgba(${a},${b2},${c},${1 - u})`; g.lineWidth = 6 * (1 - u) + 2; g.beginPath(); g.arc(r.x, r.y, 12 + easeOut(u) * 46, 0, 7); g.stroke(); g.fillStyle = `rgba(${a},${b2},${c},${0.35 * (1 - u)})`; g.fill(); }
+  if (endAlpha(now()) <= 0) { const hs = handState(); if (hs) drawHand(g, hs); }
 }
 function draw(t) {
   const g = ctx, cw = cv.width, ch = cv.height, blur = blurAmt();
@@ -109,9 +111,7 @@ function draw(t) {
     g.save(); g.translate(S.failX * DW, view.y0 + S.failY * view.h); g.rotate((1 - easeOut(u)) * -0.3); const s = Math.max(0.001, easeBack(u)); g.scale(s, s); g.globalAlpha = clamp01(u * 4); g.drawImage(draw.badge, -size / 2, -size / 2, size, size); g.restore(); }
   if (G.winT != null && S.winText) { const u = (G.t - G.winT) / 0.5; g.save(); g.globalAlpha = clamp01(u * 3); g.translate(DW / 2, DH * 0.45); const s = easeBack(u); g.scale(s, s); g.font = '900 84px "PingFang SC","Noto Sans CJK SC",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round'; g.lineWidth = 14; g.strokeStyle = '#1a1020'; g.strokeText(S.winText, 0, 0); g.fillStyle = '#ffd54a'; g.fillText(S.winText, 0, 0); g.restore(); }
   A.drawDisclaimer(g, S, view);
-  const ea = endAlpha(t); if (ea > 0) drawEnd(g, ea);
-  for (let i = ripples.length - 1; i >= 0; i--) { const r = ripples[i], u = (t - r.t0) / 420; if (u > 1) { ripples.splice(i, 1); continue; } const [a, b2, c] = A.hexRGB(S.rippleColor); g.strokeStyle = `rgba(${a},${b2},${c},${1 - u})`; g.lineWidth = 6 * (1 - u) + 2; g.beginPath(); g.arc(r.x, r.y, 12 + easeOut(u) * 46, 0, 7); g.stroke(); g.fillStyle = `rgba(${a},${b2},${c},${0.35 * (1 - u)})`; g.fill(); }
-  const hs = handState(); if (hs) drawHand(g, hs);
+  const ea = endAlpha(t); if (ea > 0) { drawEnd(g, ea); const hs = handState(); if (hs) drawHand(g, hs); }
   draw.blur = blur;
 }
 function endAlpha(t) { if (!G) return 0; const e = G.winT ?? failShowT(); if (e == null || !S.endCard) return 0; const d = (G.t - e) * 1000 - S.endDelay; return d > 0 ? Math.min(1, d / 400) : 0; }
@@ -225,14 +225,14 @@ function frameItems(t) {
   for (const f of G.flying) { const q = G.flyPos(f); out.push({ id: 'fly_' + f.id, asset: q.shank > 0.5 ? 'pinfly_' + f.c : 'pin_' + f.c, x: q.x, y: q.y, sc: q.s, rot: q.rot, z: 3.3 }); }
   const sm = smokeState(); if (sm) out.push({ id: 'smoke', asset: 'smoke', x: sm.x, y: sm.y, sc: sm.sc, z: 3.5 });
   out.push({ id: 'title', asset: 'title', x: view.x0, y: view.y0, z: 4 });
-  const ts = timerScale(); if (ts > 0.001) { const n = Math.max(0, Math.ceil(G.remaining() - 1e-6)); out.push({ id: 'timer', asset: 'timer_' + n, x: S.timerX, y: S.timerY, sc: ts, z: 4.1 }); }
+  const ts = timerScale(); if (ts > 0.001) { const n = G.shownSec(); out.push({ id: 'timer', asset: 'timer_' + n, x: S.timerX, y: S.timerY, sc: ts, z: 4.1 }); }
   if (draw.blur > 0.05) out.push({ id: 'blur', blur: draw.blur, z: 5 });
   const fs = failShowT(); if (fs != null && G.t >= fs) { const u = (G.t - fs) / S.failScaleDur; out.push({ id: 'result_fail', asset: 'fail_badge', x: S.failX * DW, y: view.y0 + S.failY * view.h, sc: Math.max(0.001, easeBack(u)), rot: (1 - easeOut(u)) * -0.3, op: clamp01(u * 4), z: 6 }); }
   if (G.winT != null && S.winText) { const u = (G.t - G.winT) / 0.5; out.push({ id: 'result_win', asset: 'win_text', x: DW / 2, y: DH * 0.45, sc: Math.max(0.001, easeBack(u)), op: clamp01(u * 3), z: 6 }); }
   if (S.discShow) out.push({ id: 'disclaimer', asset: 'disclaimer', x: view.x0, y: view.y0, z: 7 });
   const ea = endAlpha(t); if (ea > 0) out.push({ id: 'end_card', asset: 'end_card', x: view.x0, y: view.y0, op: ea, z: 8 });
-  for (const r of ripples) { const u = (t - r.t0) / 420; if (u >= 0 && u <= 1) out.push({ id: 'ripple_' + (r.id || (r.id = ++frameItems.n)), asset: 'ripple', x: r.x, y: r.y, sc: (12 + easeOut(u) * 46) / 58, op: 1 - u, z: 8.5 }); }
-  const hs = handState(); if (hs) out.push({ id: 'hand', asset: 'hand', x: hs.x, y: hs.y, sc: hs.s / handScaleOf(), rot: S.handRotation * Math.PI / 180, z: 9 });
+  for (const r of ripples) { const u = (t - r.t0) / 420; if (u >= 0 && u <= 1) out.push({ id: 'ripple_' + (r.id || (r.id = ++frameItems.n)), asset: 'ripple', x: r.x, y: r.y, sc: (12 + easeOut(u) * 46) / 58, op: 1 - u, z: 4.4 }); }
+  const hs = handState(); if (hs) out.push({ id: 'hand', asset: 'hand', x: hs.x, y: hs.y, sc: hs.s / handScaleOf(), rot: S.handRotation * Math.PI / 180, z: endAlpha(t) > 0 ? 9 : 4.5 });
   return out;
 }
 frameItems.n = 0;

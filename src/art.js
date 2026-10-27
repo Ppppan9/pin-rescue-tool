@@ -128,11 +128,11 @@ export function drawBox(g, S, color, sc, filled, slotsN) {
   if (sc <= 0.001) return; const w = S.boxW, h = S.boxHt, col = color;
   g.save(); g.translate(S.boxX, S.boxY); g.scale(sc, sc);
   g.fillStyle = 'rgba(0,0,0,0.35)'; rr(g, -w / 2 + 3, -h / 2 + 7, w, h, 16); g.fill();
-  const oc = mix(col, '#fff', 0.1); g.fillStyle = mix(col, '#000', 0.3); rr(g, -w / 2, -h / 2 + 5, w, h, 16); g.fill();
+  const oc = mix(col, '#fff', 0.14); g.fillStyle = mix(col, '#000', 0.28); rr(g, -w / 2, -h / 2 + 5, w, h, 16); g.fill();
   g.fillStyle = oc; rr(g, -w / 2, -h / 2, w, h - 6, 16); g.fill();
   g.fillStyle = mix(col, '#fff', S.boxInner); rr(g, -w / 2 + 12, -h / 2 + 10, w - 24, h - 28, 10); g.fill();
   g.strokeStyle = mix(col, '#000', 0.2); g.lineWidth = 2; g.stroke();
-  rr(g, -w / 2, -h / 2, w, h + 5, 16); g.strokeStyle = OUT; g.lineWidth = 3.5; g.stroke();
+  rr(g, -w / 2, -h / 2, w, h + 5, 16); g.strokeStyle = mix(col, '#000', 0.65); g.lineWidth = 3.5; g.stroke();
   for (let i = 0; i < slotsN; i++) { const p = slotPos(S, i), x = p.x - S.boxX, y = p.y - S.boxY - 3; g.fillStyle = mix(col, '#000', 0.25); g.beginPath(); g.arc(x, y, S.slotR + 3, 0, 7); g.fill(); g.fillStyle = '#2a1f26'; g.beginPath(); g.arc(x, y, S.slotR, 0, 7); g.fill(); g.fillStyle = 'rgba(255,255,255,0.12)'; g.beginPath(); g.arc(x, y + S.slotR * 0.35, S.slotR * 0.55, 0, Math.PI); g.fill(); }
   for (const f of filled) { const p = slotPos(S, f.slot); drawPin(g, p.x - S.boxX, p.y - S.boxY - 3, S.pinR * 0.95, colorOf(S, f.c), { rot: f.rot }); }
   g.restore();
@@ -154,13 +154,13 @@ function segDigit(g, d, x, y, w, h, th) {
   const segs = { a: [-hw, -hh, hw, -hh], b: [hw, -hh, hw, 0], c: [hw, 0, hw, hh], d: [-hw, hh, hw, hh], e: [-hw, 0, -hw, hh], f: [-hw, -hh, -hw, 0], g: [-hw, 0, hw, 0] };
   for (const pass of [0, 1]) { g.lineCap = 'round'; g.lineWidth = pass ? th : th + 5; g.strokeStyle = pass ? '#fff' : '#000'; for (const s of S2) { const [x0, y0, x1, y1] = segs[s], gx = (x1 - x0) ? 0.18 * th : 0, gy = (y1 - y0) ? 0.18 * th : 0; g.beginPath(); g.moveTo(x + x0 + gx, y + y0 + gy); g.lineTo(x + x1 - gx, y + y1 - gy); g.stroke(); } }
 }
-export function drawTimer(g, S, rem, frac, sc) {
+export function drawTimer(g, S, shown, frac, sc) {
   if (sc <= 0.001) return; const R = S.timerR; g.save(); g.translate(S.timerX, S.timerY); g.scale(sc, sc);
   g.fillStyle = '#2a2d36'; g.beginPath(); g.arc(0, 0, R, 0, 7); g.fill(); g.strokeStyle = OUT; g.lineWidth = 3; g.stroke();
   g.fillStyle = '#05070a'; g.beginPath(); g.arc(0, 0, R * 0.72, 0, 7); g.fill();
   const col = frac > 0.5 ? mix(S.timerColMid, S.timerColHi, (frac - 0.5) * 2) : frac > 0.2 ? mix(S.timerColLo, S.timerColMid, (frac - 0.2) / 0.3) : S.timerColLo;
   if (frac > 0) { g.strokeStyle = col; g.lineWidth = R * 0.2; g.lineCap = 'butt'; g.beginPath(); g.arc(0, 0, R * 0.86, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * frac); g.stroke(); }
-  const n = String(Math.max(0, Math.ceil(rem - 1e-6)));
+  const n = String(Math.max(0, shown));
   if (S.timerDigits === 'seg') { const w = R * 0.34, h = R * 0.7, gap = R * 0.18, tw = n.length * w + (n.length - 1) * gap; [...n].forEach((d, i) => segDigit(g, +d, -tw / 2 + w / 2 + i * (w + gap), 0, w, h, R * 0.11)); }
   else { g.font = `900 ${R * 0.9}px Arial,sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 5; g.strokeStyle = '#000'; g.strokeText(n, 0, 2); g.fillStyle = '#fff'; g.fillText(n, 0, 2); }
   g.restore();
@@ -291,7 +291,6 @@ export function gloveCanvas() {
   g.beginPath(); g.moveTo(-50, -20); g.lineTo(-48, -128); g.quadraticCurveTo(-34, -150, -18, -128); g.lineTo(-14, -40); g.fillStyle = '#fff'; g.fill(); st();
   // 阴影（左侧浅蓝）
   g.save(); g.globalCompositeOperation = 'source-atop'; g.fillStyle = 'rgba(160,200,235,0.55)'; g.fillRect(-60, -140, 16, 200); g.restore();
-  g.fillStyle = 'rgba(160,200,235,0.55)'; g.beginPath(); g.ellipse(-42, -80, 4, 40, 0, 0, 7); g.fill();
   // 袖口（卷边 + 深色开口）
   g.fillStyle = '#fff'; g.beginPath(); g.roundRect(-60, 50, 124, 52, 22); g.fill(); st();
   g.fillStyle = '#e3eef8'; g.beginPath(); g.roundRect(-52, 80, 108, 16, 8); g.fill();

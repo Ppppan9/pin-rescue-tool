@@ -31,7 +31,7 @@ export function buildSprites({ S, view, bg, stoneSpr, handImg, charPose, endDraw
   }
   { const n = 380; sprite('boxfx', n, n, n / 2, n / 2, g => { g.translate(n / 2 - S.boxX, n / 2 - S.boxY); A.drawBoxFx(g, S, 0.3); }); }
   { const n = S.smokeSize * 2.6; sprite('smoke', n, n, n / 2, n / 2, g => A.drawSmoke(g, S, n / 2, n / 2, 1, 3)); }
-  for (let k = 0; k <= Math.ceil(S.timerSec); k++) { const n = S.timerR * 2 + 12; sprite('timer_' + k, n, n, n / 2, n / 2, g => { g.translate(n / 2 - S.timerX, n / 2 - S.timerY); A.drawTimer(g, S, k, Math.min(1, k / S.timerSec), 1); }); }
+  for (let k = 0; k <= Math.ceil(S.timerSec + S.timerShowOffset); k++) { const n = S.timerR * 2 + 12; sprite('timer_' + k, n, n, n / 2, n / 2, g => { g.translate(n / 2 - S.timerX, n / 2 - S.timerY); A.drawTimer(g, S, k, Math.max(0, Math.min(1, (k - S.timerShowOffset) / S.timerSec)), 1); }); }
   { const size = S.failSize * DW, c = A.failBadge(S, Math.round(size * KS)); out.fail_badge = { c, w: size, h: size, ax: size / 2, ay: size / 2 }; }
   sprite('win_text', 640, 160, 320, 80, g => { g.translate(320, 80); g.font = '900 84px "PingFang SC","Noto Sans CJK SC",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round'; g.lineWidth = 14; g.strokeStyle = '#1a1020'; g.strokeText(S.winText || '', 0, 0); g.fillStyle = '#ffd54a'; g.fillText(S.winText || '', 0, 0); });
   sprite('ripple', 130, 130, 65, 65, g => { const [a, b, c] = A.hexRGB(S.rippleColor); g.strokeStyle = `rgb(${a},${b},${c})`; g.lineWidth = 5; g.beginPath(); g.arc(65, 65, 58, 0, 7); g.stroke(); g.fillStyle = `rgba(${a},${b},${c},0.3)`; g.fill(); });

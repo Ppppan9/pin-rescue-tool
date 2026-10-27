@@ -36,7 +36,9 @@ export class Game {
     this.buildStatic(); this.buildGrid(); this.buildLid(); this.fillStones();
     this.world.on('pre-solve', c => {
       const a = c.getFixtureA().getBody().getUserData(), b = c.getFixtureB().getBody().getUserData();
-      if (a && b && a.kind === 'plank' && b.kind === 'plank' && a.nodes.some(n => b.nodes.includes(n))) c.setEnabled(false);
+      if (a && b && a.kind === 'plank' && b.kind === 'plank') { const m = this.S.plankCollide; if (m === 'none' || a.nodes.some(n => b.nodes.includes(n)) || (m === 'hanging' && (a.free || b.free))) c.setEnabled(false); }
+      if (a && b && this.S.freeFall && ((a.kind === 'plank' && a.free && b.kind === 'pin') || (b.kind === 'plank' && b.free && a.kind === 'pin'))) c.setEnabled(false);
+      if (a && b && ((a.kind === 'plank' && b.kind === 'pin') || (a.kind === 'pin' && b.kind === 'plank'))) { const pk = a.kind === 'plank' ? a : b, pn = a.kind === 'pin' ? a : b; if (pk.nodes.includes(pn.id)) c.setEnabled(false); }
     });
     this.world.on('post-solve', (c, imp) => {
       const a = c.getFixtureA().getBody().getUserData(), b = c.getFixtureB().getBody().getUserData();
@@ -65,19 +67,21 @@ export class Game {
     const S = this.S, L = this.layout, nodeAt = {};
     L.forEach((row, r) => row.forEach((c, k) => {
       if (!c) return; const x = S.gridX0 + k * S.gridDX, y = S.gridY0 + r * S.gridDY;
-      const b = this.world.createBody({ type: 'static', position: V(x, y) }); b.setUserData({ kind: 'pin' });
+      const b = this.world.createBody({ type: 'static', position: V(x, y) }); b.setUserData({ kind: 'pin', id: this.nextId });
       b.createFixture(planck.Circle(S.pinR / PX), { friction: 0.3 });
-      const p = { id: this.nextId++, r, k, c, x, y, body: b, joints: [], alive: true }; this.pins.push(p); nodeAt[r + ',' + k] = p;
+      const p = { id: this.nextId++, r, k, c, x, y, body: b, planks: [], alive: true }; this.pins.push(p); nodeAt[r + ',' + k] = p;
     }));
     const mk = (r0, k0, r1, k1, hor) => {
       const a = nodeAt[r0 + ',' + k0], b = nodeAt[r1 + ',' + k1]; if (!a || !b) return;
       const cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2, len = Math.hypot(b.x - a.x, b.y - a.y), ang = Math.atan2(b.y - a.y, b.x - a.x), th = (hor ? S.plankH : S.plankV) / 2;
-      const body = this.world.createBody({ type: 'dynamic', position: V(cx, cy), angle: ang, angularDamping: 0.6, linearDamping: 0.05 });
+      // 两端都有钉子时木板是静态的（被两颗钉子钉死，不会动；避免几百颗石头压在关节上时数值漂移）；
+      // 只剩一颗钉子 → 动态刚体 + 绕该钉子的转动关节（摆动）；一颗都没有 → 自由落体
+      const body = this.world.createBody({ type: 'static', position: V(cx, cy), angle: ang, angularDamping: S.plankDamp, linearDamping: 0.05 });
       const opt = { density: S.plankDensity, friction: S.plankFriction, restitution: 0.05 };
       body.createFixture(planck.Box(len / 2 / PX, th / PX), opt);
       body.createFixture(planck.Circle(V(-len / 2, 0), th / PX), opt); body.createFixture(planck.Circle(V(len / 2, 0), th / PX), opt);
-      const pk = { id: this.nextId++, hor, len, th, body, nodes: [a.id, b.id], kind: 'plank', seed: (r0 * 13 + k0 * 7 + (hor ? 1 : 0)) }; body.setUserData(pk); this.planks.push(pk);
-      for (const p of [a, b]) { const j = this.world.createJoint(planck.RevoluteJoint({}, p.body, body, V(p.x, p.y))); p.joints.push(j); }
+      const pk = { id: this.nextId++, hor, len, th, body, nodes: [a.id, b.id], pins: [a, b], joint: null, kind: 'plank', seed: (r0 * 13 + k0 * 7 + (hor ? 1 : 0)) }; body.setUserData(pk); this.planks.push(pk);
+      a.planks.push(pk); b.planks.push(pk);
     };
     // 先竖后横：横木板画在竖木板上面（参考）
     if (S.plankVOn) for (let r = 0; r < L.length - 1; r++) for (let k = 0; k < 20; k++) mk(r, k, r + 1, k, false);
@@ -196,12 +200,20 @@ export class Game {
     return { ok: false, pin: p };
   }
   pull(p, discard) {
-    p.alive = false; for (const j of p.joints) { try { this.world.destroyJoint(j); } catch (e) { } } p.joints = []; this.world.destroyBody(p.body);
-    for (const pk of this.planks) pk.body.setAwake(true);
+    p.alive = false; this.world.destroyBody(p.body);
+    for (const pk of p.planks) this.updatePlank(pk);
     const slot = discard ? -1 : this.box.reserved++;
     const to = discard ? { x: p.x < DW / 2 ? -60 : DW + 60, y: p.y - 300 } : slotPos(this.S, slot);
     this.flying.push({ id: p.id, c: p.c, x0: p.x, y0: p.y, to, slot, t0: this.t, discard, rot: (this.rng() - 0.5) * 1.2 });
     this.events.push({ type: 'pop', pin: p });
+  }
+  updatePlank(pk) {
+    const live = pk.pins.filter(q => q.alive);
+    if (pk.joint) { try { this.world.destroyJoint(pk.joint); } catch (e) { } pk.joint = null; }
+    pk.free = live.length === 0;
+    if (live.length >= 2) { pk.body.setType('static'); return; }
+    pk.body.setType('dynamic'); pk.body.setAwake(true);
+    if (live.length === 1) { const q = live[0]; pk.joint = this.world.createJoint(planck.RevoluteJoint({}, q.body, pk.body, V(q.x, q.y))); }
   }
   flyPos(f) { // 先原地弹起（露出钉身、略放大），再抛物线飞向孔位
     const S = this.S, u = clamp01((this.t - f.t0) / S.flyDur), up = S.flyPop, lift = S.pinR * 1.4;
@@ -219,6 +231,7 @@ export class Game {
   }
   win() { this.state = 'win'; this.winT = this.t; this.events.push({ type: 'win' }); }
   remaining() { return Math.max(0, this.S.timerSec - (this.failT ?? this.winT ?? this.t)); }
+  shownSec() { const r = this.remaining(); return r <= 0 ? 0 : Math.ceil(r + this.S.timerShowOffset - 1e-6); }
   stoneMotion() { let s = 0, n = 0; for (let i = 0; i < this.stones.length; i += 4) { const v = this.stones[i].body.getLinearVelocity(); s += Math.hypot(v.x, v.y); n++; } return n ? s / n * PX : 0; }
   // 自动通关：当前盒颜色可拔的钉子
   candidates() { return this.pins.filter(p => p.alive && this.canTake(p.c)); }
