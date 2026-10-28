@@ -267,7 +267,7 @@ function loop() {
 }
 
 // ---------- 设置面板 ----------
-const NEWGAME_KEYS = /^(canvas|timerSec|pinLayout|boxSeq|slotsPerBox|grid|plank|pinR$|col_|box[XYW]|boxHt|boxInner|slotR|stone|gravity|physIters|prewarm|lid|charX)/;
+const NEWGAME_KEYS = /^(canvas|timerSec|pinLayout|boxSeq|slotsPerBox|boxMode|boxLeftover|grid|plank|pinR$|col_|box[XYW]|boxHt|boxInner|slotR|stone|gravity|physIters|prewarm|lid|charX)/;
 function applyChange(k) {
   if (k === 'h5DeviceW' || k === 'h5DeviceH') markH5DeviceCustomIfSizeEdited(S);
   if (k === 'h5Device' || k === 'h5DeviceW' || k === 'h5DeviceH') { try { if (window.__h5EditorDeviceFit) window.__h5EditorDeviceFit(); } catch (e) { } }

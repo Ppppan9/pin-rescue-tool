@@ -1,7 +1,7 @@
 // 拔钉救人核玩工具 —— 设置定义（中文标签），版本号 + 迁移。通用分组 / 键名按 game-toolkit-standard/TOOLKIT_STANDARD.md
 import { h5DeviceSelectOptions } from './h5/index.js';
-export const APP_VERSION = '1.0.0';
-export const SETTINGS_VERSION = 2;
+export const APP_VERSION = '1.0.1';
+export const SETTINGS_VERSION = 3;
 export const STORE_KEY = 'pinRescueTool.settings';
 export const APP_ID = 'pin-rescue-tool';
 const ALL8 = 'applovin,facebook,google,mintegral,moloco,tiktok,unity,generic';
@@ -17,7 +17,9 @@ export const GROUPS = [
     ['boxSeq', '目标盒颜色顺序（逗号分隔，参考：红→黄绿→品红→绿…）', 'text', 'R,L,M,G,P,B,R,M,G'],
     ['slotsPerBox', '每个盒子的孔数', 'range', 3, 1, 6, 1],
     ['wrongTap', '点了颜色不对的钉子', 'select', 'shake', [['shake', '钉子左右抖动 + 提示音（默认）'], ['none', '没反应'], ['discard', '照样拔出并飞出画面（不进盒）']]],
-    ['winRule', '胜利条件', 'select', 'boxes', [['boxes', '目标盒顺序全部填满'], ['never', '无（只能失败，纯演示）']]],
+    ['boxMode', '目标盒颜色怎么出', 'select', 'seqThenRemaining', [['seqThenRemaining', '先按盒序（跳过场上剩余不足的颜色），用完后从场上剩余颜色里选（默认）'], ['remaining', '始终从场上剩余最多的颜色里选'], ['seq', '只按盒序（跳过剩余不足的颜色），盒序用完即结束'], ['seqStrict', '严格按盒序（遇到剩余不足的颜色就结束）']]],
+    ['boxLeftover', '剩余不足一盒的钉子', 'select', 'partial', [['partial', '出一个只需装剩余数量的盒子，直到清空（默认）'], ['skip', '不再出盒，直接结束']]],
+    ['winRule', '胜利条件', 'select', 'boxes', [['boxes', '再没有可出的目标盒（盒子全部填满）'], ['never', '无（只能失败，纯演示）']]],
   ]],
   ['木板格子', [
     ['gridX0', '第一列钉子 X(px，参考 47)', 'range', 47, 0, 300, 1],
@@ -256,6 +258,7 @@ export function migrate(obj) {
     up('timerSec', 22.9, 22.6); up('timerShowOffset', 0.25, 0.55); up('smokeSize', 190, 240); up('woodImpulse', undefined, 2.5);
     v = 2;
   }
+  if (v < 3) { v = 3; } // v3：新增 boxMode / boxLeftover，缺省值由 DEFS 补齐
   for (const nv of Object.keys(OLD_DEFAULTS).map(Number).sort((a, b) => a - b)) if (v < nv) { for (const k in OLD_DEFAULTS[nv]) if (s[k] === OLD_DEFAULTS[nv][k]) delete s[k]; v = nv; }
   const out = { ...DEFS };
   for (const k in DEFS) if (k in s && typeof s[k] === typeof DEFS[k]) out[k] = s[k];

@@ -30,7 +30,8 @@ npm run shots          # 与参考帧并排对比 screenshots/compare_*.png
 - 失败压塌发生在 22.6 秒，最后 0.3 秒的压板下落曲线是近似的。
 - 免责声明左侧小字有部分是根据模糊画面推测的，可以在「文字」设置里修改。
 - AE 导出：计时器每秒换一张图；小人只有推、怕、压扁 3 个静态姿势；失败时的整屏模糊用调整图层近似，压暗没有导出。
+- 不足一盒的余数盒仍画 3 个槽位，只需装剩余数量即算填满。
 - 只做了第 1 关；本工具没有 3D 导出。
 
 ## 测试
-`npm test`（手动点钉、点错晃动、自动通关到失败、快速通关获胜）、`npm run test:ae`、`npm run test:h5`（加 `quick` 参数只做快速检查）、`npm run shots`（生成 screenshots/compare_*.png，上排是我们的画面，下排是参考视频）。
+`npm test`（含 free-order：真实点击按随机顺序拔钉，编辑器与 H5 都测；手动点钉、点错晃动、自动通关到失败、快速通关获胜）、`npm run test:ae`、`npm run test:h5`（加 `quick` 参数只做快速检查）、`npm run shots`（生成 screenshots/compare_*.png，上排是我们的画面，下排是参考视频）。

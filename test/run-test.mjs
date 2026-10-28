@@ -16,7 +16,7 @@ await p.evaluate(() => { __game.newGame(); __game.autoSolve(); });
 for (let i = 0; i < 30 && s.state !== 'fail'; i++) s = await step(30);
 ok(s.state === 'fail', `默认节奏自动通关到时间结束 → 失败（state=${s.state}, box=${s.box}）`);
 // 3) 快速 + 短盒序 → 获胜
-await p.evaluate(() => { __game.setMany({ boxSeq: 'R,L', timerSec: 60, moveMin: 80, moveMax: 100, delayMin: 50, delayMax: 80, autoStartDelay: 200 }); __game.newGame(); __game.autoSolve(); });
+await p.evaluate(() => { __game.setMany({ boxSeq: 'R,L', boxMode: 'seq', timerSec: 60, moveMin: 80, moveMax: 100, delayMin: 50, delayMax: 80, autoStartDelay: 200 }); __game.newGame(); __game.autoSolve(); });
 s = await step(5); for (let i = 0; i < 40 && s.state !== 'win'; i++) s = await step(30);
 ok(s.state === 'win', `快速自动通关 + 2 盒 → 胜利（state=${s.state}）`);
 ok(errs.length === 0, '无页面报错 ' + errs.slice(0, 3).join(' | '));

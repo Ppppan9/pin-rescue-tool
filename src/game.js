@@ -30,10 +30,11 @@ export class Game {
     this.S = S; this.t = 0; this.events = []; this.state = 'play'; this.rng = mulberry(12345);
     this.world = new planck.World({ gravity: planck.Vec2(0, S.gravity / PX) });
     this.layout = parseLayout(S); this.seq = parseSeq(S); if (!this.seq.length) this.seq = ['R'];
-    this.boxIdx = 0; this.box = { color: this.seq[0], filled: [], reserved: 0, phase: 'idle', t0: -9, scale: 1 };
+    this.boxIdx = 0; this.box = { color: this.seq[0], need: S.slotsPerBox, filled: [], reserved: 0, phase: 'idle', t0: -9, scale: 1 };
     this.flying = []; this.stones = []; this.pins = []; this.planks = []; this.nextId = 1; this.failT = null; this.winT = null; this.shakes = [];
     this.sagTimes = parseTimes(S.lidSagTimes); this.lidAng = S.lidStartDeg * Math.PI / 180; this.woodCool = 0; this.lastTick = -1;
     this.buildStatic(); this.buildGrid(); this.buildLid(); this.fillStones();
+    { const f = this.pickBox(0); if (f) { this.box.color = f.c; this.box.need = f.need; this.boxIdx = f.idx; } else this.box.phase = 'gone'; }
     this.world.on('pre-solve', c => {
       const a = c.getFixtureA().getBody().getUserData(), b = c.getFixtureB().getBody().getUserData();
       if (a && b && a.kind === 'plank' && b.kind === 'plank') { const m = this.S.plankCollide; if (m === 'none' || a.nodes.some(n => b.nodes.includes(n)) || (m === 'hanging' && (a.free || b.free))) c.setEnabled(false); }
@@ -170,16 +171,16 @@ export class Game {
     // 飞行中的钉子
     for (let i = this.flying.length - 1; i >= 0; i--) {
       const f = this.flying[i], u = (t - f.t0) / S.flyDur;
-      if (u >= 1) { this.flying.splice(i, 1); if (f.discard) continue; this.box.filled.push({ c: f.c, slot: f.slot, rot: f.rot, t: t }); this.events.push({ type: 'slot', pin: f }); if (this.box.filled.length >= S.slotsPerBox) { this.box.phase = 'full'; this.box.t0 = t; this.events.push({ type: 'boxfull', color: this.box.color }); } }
+      if (u >= 1) { this.flying.splice(i, 1); if (f.discard) continue; this.box.filled.push({ c: f.c, slot: f.slot, rot: f.rot, t: t }); this.events.push({ type: 'slot', pin: f }); if (this.box.filled.length >= this.box.need) { this.box.phase = 'full'; this.box.t0 = t; this.events.push({ type: 'boxfull', color: this.box.color }); } }
     }
     // 盒子：填满 → 停顿 → 闪光 → 缩小消失 → 新盒弹出
     const bx = this.box, pt = t - bx.t0;
     if (bx.phase === 'full' && pt >= S.boxFxDelay) { bx.phase = 'fx'; bx.t0 = t; this.events.push({ type: 'chime' }); }
     else if (bx.phase === 'fx' && pt >= S.boxFxDur) { bx.phase = 'out'; bx.t0 = t; }
     else if (bx.phase === 'out' && pt >= S.boxOutDur) {
-      this.boxIdx++;
-      if (this.boxIdx >= this.seq.length) { bx.phase = 'gone'; if (S.winRule === 'boxes' && this.state === 'play') this.win(); }
-      else { bx.color = this.seq[this.boxIdx]; bx.filled = []; bx.reserved = 0; bx.phase = 'in'; bx.t0 = t; }
+      const nx = this.pickBox(this.boxIdx + 1);
+      if (!nx) { bx.phase = 'gone'; if (S.winRule === 'boxes' && this.state === 'play') this.win(); }
+      else { this.boxIdx = nx.idx; bx.color = nx.c; bx.need = nx.need; bx.filled = []; bx.reserved = 0; bx.phase = 'in'; bx.t0 = t; }
     } else if (bx.phase === 'in' && pt >= S.boxInDur) { bx.phase = 'idle'; }
     for (let i = this.shakes.length - 1; i >= 0; i--) if (t - this.shakes[i].t0 > 0.4) this.shakes.splice(i, 1);
   }
@@ -191,7 +192,21 @@ export class Game {
     return 1;
   }
   pinAt(x, y) { let best = null, bd = 1e9; for (const p of this.pins) if (p.alive) { const d = Math.hypot(p.x - x, p.y - y); if (d < this.S.pinHitR && d < bd) { bd = d; best = p; } } return best; }
-  canTake(c) { const bx = this.box; return this.state === 'play' && (bx.phase === 'idle' || bx.phase === 'in') && bx.color === c && bx.reserved < this.S.slotsPerBox; }
+  canTake(c) { const bx = this.box; return this.state === 'play' && (bx.phase === 'idle' || bx.phase === 'in') && bx.color === c && bx.reserved < bx.need; }
+  // 场上剩余（未拔）各颜色钉子数
+  remainingCounts() { const m = {}; for (const p of this.pins) if (p.alive) m[p.c] = (m[p.c] || 0) + 1; return m; }
+  // 选下一个目标盒：按设置用盒序 / 场上剩余颜色；绝不生成剩余不足 need 的颜色（余数按 boxLeftover 处理）
+  pickBox(idx) {
+    const S = this.S, n = S.slotsPerBox, cnt = this.remainingCounts(), mode = S.boxMode || 'seqThenRemaining';
+    const order = this.pins.filter(p => p.alive).map(p => p.c).filter((c, i, a) => a.indexOf(c) === i);
+    if (mode !== 'remaining') for (let i = idx; i < this.seq.length; i++) { const c = this.seq[i]; if ((cnt[c] || 0) >= n) return { c, need: n, idx: i }; if (mode === 'seqStrict') return null; }
+    if (mode === 'seq' || mode === 'seqStrict') return null;
+    const j = Math.max(idx, this.seq.length);
+    let best = null; for (const c of order) if ((cnt[c] || 0) >= n && (!best || cnt[c] > cnt[best])) best = c;
+    if (best) return { c: best, need: n, idx: j };
+    if (S.boxLeftover === 'partial') { let lb = null; for (const c of order) if (!lb || cnt[c] > cnt[lb]) lb = c; if (lb) return { c: lb, need: cnt[lb], idx: j }; }
+    return null;
+  }
   tap(x, y) {
     if (this.state !== 'play') return null; const p = this.pinAt(x, y); if (!p) return null;
     if (this.canTake(p.c)) { this.pull(p, false); return { ok: true, pin: p }; }

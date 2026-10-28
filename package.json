@@ -1,11 +1,11 @@
 {
   "name": "pin-rescue-tool",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "拔钉救人核玩工具（单文件离线版）",
   "type": "module",
   "scripts": {
     "build": "node build.mjs",
-    "test": "node test/run-test.mjs",
+    "test": "node test/run-test.mjs && node test/free-order.mjs",
     "test:ae": "node test/ae-export.mjs",
     "test:h5": "node test/h5-export.mjs",
     "shots": "node test/shots.mjs"
