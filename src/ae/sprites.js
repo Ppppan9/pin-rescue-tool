@@ -35,7 +35,7 @@ export function buildSprites({ S, view, bg, stoneSpr, handImg, charPose, endDraw
   { const size = S.failSize * DW, c = A.failBadge(S, Math.round(size * KS)); out.fail_badge = { c, w: size, h: size, ax: size / 2, ay: size / 2 }; }
   sprite('win_text', 640, 160, 320, 80, g => { g.translate(320, 80); g.font = '900 84px "PingFang SC","Noto Sans CJK SC",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round'; g.lineWidth = 14; g.strokeStyle = '#1a1020'; g.strokeText(S.winText || '', 0, 0); g.fillStyle = '#ffd54a'; g.fillText(S.winText || '', 0, 0); });
   sprite('ripple', 130, 130, 65, 65, g => { const [a, b, c] = A.hexRGB(S.rippleColor); g.strokeStyle = `rgb(${a},${b},${c})`; g.lineWidth = 5; g.beginPath(); g.arc(65, 65, 58, 0, 7); g.stroke(); g.fillStyle = `rgba(${a},${b},${c},0.3)`; g.fill(); });
-  if (handImg) { const s = S.handSize * DW / handImg.width, w = handImg.width * s, h = handImg.height * s, c = A.mk(handImg.width, handImg.height), g = c.getContext('2d'); if (S.handFlip) { g.translate(c.width, 0); g.scale(-1, 1); } g.drawImage(handImg, 0, 0); out.hand = { c, w, h, ax: (S.handFlip ? 1 - S.handAnchorX : S.handAnchorX) * w, ay: S.handAnchorY * h }; }
+  if (handImg) { const s = S.handSize * DW / handImg.width, w = handImg.width * s, h = handImg.height * s, c = A.mk(handImg.width, handImg.height), g = c.getContext('2d'); if (S.handFlip) { g.translate(c.width, 0); g.scale(-1, 1); } g.drawImage(handImg, 0, 0); out.hand = { c, w, h, ax: (S.handFlip ? 1 - (handImg._glove ? S.gloveAnchorX : S.handAnchorX) : (handImg._glove ? S.gloveAnchorX : S.handAnchorX)) * w, ay: (handImg._glove ? S.gloveAnchorY : S.handAnchorY) * h }; }
   overlay('end_card', g => endDraw(g));
   return out;
 }

@@ -1,7 +1,7 @@
 // 拔钉救人核玩工具 —— 设置定义（中文标签），版本号 + 迁移。通用分组 / 键名按 game-toolkit-standard/TOOLKIT_STANDARD.md
 import { h5DeviceSelectOptions } from './h5/index.js';
-export const APP_VERSION = '1.0.1';
-export const SETTINGS_VERSION = 3;
+export const APP_VERSION = '1.0.2';
+export const SETTINGS_VERSION = 4;
 export const STORE_KEY = 'pinRescueTool.settings';
 export const APP_ID = 'pin-rescue-tool';
 const ALL8 = 'applovin,facebook,google,mintegral,moloco,tiktok,unity,generic';
@@ -185,12 +185,14 @@ export const GROUPS = [
     ['autoPick', '选钉策略', 'select', 'top', [['top', '优先上排（先放石头流动，参考观感）'], ['near', '离手指最近'], ['random', '随机']]],
     ['autoStartDelay', '开始前等待(ms，参考第一次点击≈2.6 秒)', 'range', 1950, 0, 5000, 50],
     ['handSize', '手指大小(画面宽比例，参考≈0.36)', 'range', 0.36, 0.1, 0.9, 0.01],
-    ['handAnchorX', '指尖锚点 X(0~1)', 'range', 0.11, 0, 1, 0.005],
-    ['handAnchorY', '指尖锚点 Y(0~1)', 'range', 0.255, 0, 1, 0.005],
+    ['handAnchorX', '指尖锚点 X(0~1，预设手指/上传图片)', 'range', 0.2204, 0, 1, 0.0001],
+    ['handAnchorY', '指尖锚点 Y(0~1，预设手指/上传图片)', 'range', 0.0367, 0, 1, 0.0001],
+    ['gloveAnchorX', '白手套 指尖锚点 X', 'range', 0.11, 0, 1, 0.005],
+    ['gloveAnchorY', '白手套 指尖锚点 Y', 'range', 0.255, 0, 1, 0.005],
     ['handRotation', '手指旋转(度)', 'range', 0, -60, 60, 1],
     ['handFlip', '手指水平翻转', 'bool', false],
-    ['handImage', '上传手指图片(透明PNG；留空=内置白手套)', 'file', ''],
-    ['handGlove', '没上传图片时使用内置白手套（参考同款造型，程序绘制）', 'bool', true],
+    ['handStyle', '手指样式（未上传图片时）', 'select', 'preset', [['preset', '预设手指 hand.png（与其它核玩工具同款，默认）'], ['glove', '程序绘制白手套（参考视频同款造型）'], ['none', '不显示手指']]],
+    ['handImage', '上传手指图片(透明PNG；留空=用上面的手指样式)', 'file', ''],
     ['pressEnabled', '点击按下效果', 'bool', true],
     ['pressDepth', '按压幅度（按下时手指缩小比例）', 'range', 0.12, 0, 0.3, 0.01],
     ['tapRipple', '点击处黄色波纹圈', 'bool', true],
@@ -258,7 +260,12 @@ export function migrate(obj) {
     up('timerSec', 22.9, 22.6); up('timerShowOffset', 0.25, 0.55); up('smokeSize', 190, 240); up('woodImpulse', undefined, 2.5);
     v = 2;
   }
-  if (v < 3) { v = 3; } // v3：新增 boxMode / boxLeftover，缺省值由 DEFS 补齐
+  if (v < 3) { v = 3; }
+  if (v < 4) { // v4：默认手指改为预设 hand.png；白手套变成可选样式
+    if ('handGlove' in s) { if (!s.handImage) s.handStyle = s.handGlove === false ? 'none' : 'preset'; delete s.handGlove; }
+    if (s.handImage) { /* 用户上传的图片保留，原锚点也保留 */ } else { if (s.handAnchorX === 0.11) s.handAnchorX = 0.2204; if (s.handAnchorY === 0.255) s.handAnchorY = 0.0367; }
+    v = 4;
+  } // v3：新增 boxMode / boxLeftover，缺省值由 DEFS 补齐
   for (const nv of Object.keys(OLD_DEFAULTS).map(Number).sort((a, b) => a - b)) if (v < nv) { for (const k in OLD_DEFAULTS[nv]) if (s[k] === OLD_DEFAULTS[nv][k]) delete s[k]; v = nv; }
   const out = { ...DEFS };
   for (const k in DEFS) if (k in s && typeof s[k] === typeof DEFS[k]) out[k] = s[k];

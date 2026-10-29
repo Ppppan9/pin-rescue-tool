@@ -5,6 +5,7 @@ import * as A from './art.js';
 import { Sfx } from './audio.js';
 import { createAERecorder } from './ae/recorder.js';
 import { buildSprites } from './ae/sprites.js';
+import { DEFAULT_HAND } from './default_hand.js';
 import { exportH5PlayableFromPage, applyPlayableMode, isPlayableNoHand, applyH5DevicePresetToSettings, markH5DeviceCustomIfSizeEdited, bindEditorDevicePreview } from './h5/index.js';
 
 const H5_NO_HAND = isPlayableNoHand();
@@ -122,7 +123,7 @@ function drawEnd(g, a) { g.save(); g.globalAlpha = a; g.fillStyle = 'rgba(0,0,0,
 function handScaleOf() { return hand.img ? S.handSize * DW / hand.img.width : 1; }
 const handHiddenByEnd = () => !S.endCardHand && endAlpha(now()) > 0;
 function handState() { if (H5_NO_HAND || !S.handShow || !hand.img || !hand.visible || handHiddenByEnd()) return null; if (!autoRunning && !S.manualHand) return null; return { x: hand.x, y: hand.y, s: handScaleOf() * (1 - S.pressDepth * hand.press) }; }
-function drawHand(g, h) { const im = hand.img, w = im.width * h.s, hh = im.height * h.s; g.save(); g.translate(h.x, h.y); g.rotate(S.handRotation * Math.PI / 180); if (S.handFlip) g.scale(-1, 1); g.drawImage(im, -S.handAnchorX * w, -S.handAnchorY * hh, w, hh); g.restore(); }
+function drawHand(g, h) { const im = hand.img, w = im.width * h.s, hh = im.height * h.s; g.save(); g.translate(h.x, h.y); g.rotate(S.handRotation * Math.PI / 180); if (S.handFlip) g.scale(-1, 1); g.drawImage(im, -(im._glove ? S.gloveAnchorX : S.handAnchorX) * w, -(im._glove ? S.gloveAnchorY : S.handAnchorY) * hh, w, hh); g.restore(); }
 function handCursorHidden() { return !H5_NO_HAND && !!(S.hideCursor && S.handShow && hand.img && !handHiddenByEnd() && (autoRunning ? hand.visible : S.manualHand && hand.visible)); }
 function updateCursor() { const c = handCursorHidden() ? 'none' : 'pointer'; if (cv.style.cursor !== c) cv.style.cursor = c; }
 function updPress(t) { if (!S.pressEnabled || hand.pressT0 == null) { hand.press = 0; return; } const p = (t - hand.pressT0) / 200; hand.press = p < 0 || p > 1 ? (hand.follow ? 1 : 0) : (hand.follow && p > 0.5 ? 1 : Math.sin(Math.PI * p)); }
@@ -246,7 +247,7 @@ function aeStop() { const r = aeRec.rec; recClosed = true; updateAEButtons(); if
 async function aeStopAndExport() { const r = aeStop(); if (!r) { toast('没有记录到内容'); return null; } return doExportAE(true, r); }
 const curRec = () => aeActive() ? aeRec.rec : aeLastRec;
 function updateAEButtons() { const b = document.getElementById('btn_aeToggle'); if (!b) return; b.textContent = aeActive() ? `■ 停止并导出（${((now() - (aeRec.rec.t0 || now())) / 1000).toFixed(1)}s）` : '● 开始记录'; b.classList.toggle('on', aeActive()); }
-async function doExportH5() { try { return await exportH5PlayableFromPage({ toolId: APP_ID, S, stripDataUrls: [], status, toast }); } catch (e) { status('H5 导出失败：' + e.message); console.error(e); return null; } }
+async function doExportH5() { try { return await exportH5PlayableFromPage({ toolId: APP_ID, S, stripDataUrls: [DEFAULT_HAND], status, toast }); } catch (e) { status('H5 导出失败：' + e.message); console.error(e); return null; } }
 const PANEL_ACTIONS = { aeToggle: () => aeActive() ? aeStopAndExport() : recStart(), aeExport: () => doExportAE(), exportH5: () => doExportH5() };
 function recTailDone(t) { if (!G) return false; const e = G.winT ?? failShowT(); return e != null && (G.t - e) * 1000 > (S.endCard ? S.endDelay + 400 : 0) + Math.max(800, S.tailSec * 1000); }
 function download(blob, name) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.textContent = `⬇ ${name} (${(blob.size / 1e6).toFixed(1)}MB)`; document.getElementById('recList').prepend(a); a.click(); }
@@ -277,8 +278,9 @@ function applyChange(k) {
 }
 function loadHand() {
   aeSpritesCache = null;
-  if (!S.handImage) { if (S.handGlove) { if (!glove) glove = A.gloveCanvas(); hand.img = glove.c; } else hand.img = null; return; }
-  const im = new Image(); im.onload = () => { hand.img = im; aeSpritesCache = null; }; im.onerror = () => { hand.img = null; }; im.src = S.handImage;
+  if (!S.handImage) { if (S.handStyle === 'glove') { if (!glove) { glove = A.gloveCanvas(); glove.c._glove = true; } hand.img = glove.c; aeSpritesCache = null; return; } if (S.handStyle === 'none') { hand.img = null; return; } }
+  const src = S.handImage || DEFAULT_HAND;
+  const im = new Image(); im.onload = () => { hand.img = im; aeSpritesCache = null; }; im.onerror = () => { hand.img = null; }; im.src = src;
 }
 function buildPanel() {
   const body = document.getElementById('panelBody'); if (!body) return;
@@ -302,7 +304,7 @@ function buildPanel() {
       else if (type === 'file') {
         const f = document.createElement('input'); f.type = 'file'; f.accept = 'image/png,image/webp,image/jpeg,image/*'; f.id = 'file_' + k;
         f.onchange = () => { const file = f.files[0]; if (!file) return; const fr = new FileReader(); fr.onload = () => { S[k] = fr.result; applyChange(k); }; fr.readAsDataURL(file); };
-        const x = document.createElement('button'); x.textContent = k === 'handImage' ? '清除已上传手指（用内置手套）' : '清除'; if (k === 'handImage') x.id = 'btnClearHand'; x.onclick = () => { S[k] = ''; f.value = ''; applyChange(k); };
+        const x = document.createElement('button'); x.textContent = k === 'handImage' ? '清除已上传手指（用手指样式）' : '清除'; if (k === 'handImage') x.id = 'btnClearHand'; x.onclick = () => { S[k] = ''; f.value = ''; applyChange(k); };
         row.append(f, x);
       }
       det.append(row);
