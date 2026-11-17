@@ -344,3 +344,6 @@ window.__game = {
   doExportAE, doExportH5, aeStart: () => recStart(), aeStop: () => aeStop(), aeActive: () => aeActive(), startRec, stopRec, get mediaRec() { return rec; }, migrate, APP_ID, APP_VERSION, glove: () => glove,
 };
 buildPanel(); loadHand(); newGame(); window.__ready = true; requestAnimationFrame(loop);
+
+import { installPanelUI } from './panel-ui.js';
+installPanelUI({ openKey: 'pinRescueTool.panelOpen.v1' });

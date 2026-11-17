@@ -1,6 +1,6 @@
 {
   "name": "pin-rescue-tool",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "拔钉救人核玩工具（单文件离线版）",
   "type": "module",
   "scripts": {
@@ -8,9 +8,17 @@
     "test": "node test/run-test.mjs && node test/free-order.mjs && node test/auto-win.mjs",
     "test:ae": "node test/ae-export.mjs",
     "test:h5": "node test/h5-export.mjs",
-    "shots": "node test/shots.mjs"
+    "shots": "node test/shots.mjs",
+    "test:panel": "node test/panel-features.mjs"
   },
-  "repository": { "type": "git", "url": "git+https://github.com/Ppppan9/pin-rescue-tool.git" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ppppan9/pin-rescue-tool.git"
+  },
   "license": "ISC",
-  "devDependencies": { "esbuild": "^0.28.2", "playwright-core": "^1.64.1", "planck": "^1.4.2" }
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "playwright-core": "^1.64.1",
+    "planck": "^1.4.2"
+  }
 }
