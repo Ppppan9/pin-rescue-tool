@@ -1,6 +1,6 @@
 {
   "name": "pin-rescue-tool",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "拔钉救人核玩工具（单文件离线版）",
   "type": "module",
   "scripts": {

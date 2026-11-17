@@ -1,6 +1,6 @@
 // 拔钉救人核玩工具 —— 设置定义（中文标签），版本号 + 迁移。通用分组 / 键名按 game-toolkit-standard/TOOLKIT_STANDARD.md
 import { h5DeviceSelectOptions } from './h5/index.js';
-export const APP_VERSION = '1.0.3';
+export const APP_VERSION = '1.0.4';
 export const SETTINGS_VERSION = 4;
 export const STORE_KEY = 'pinRescueTool.settings';
 export const APP_ID = 'pin-rescue-tool';
@@ -221,7 +221,11 @@ export const GROUPS = [
     ['aeStones', '石头图层', 'select', 'each', [['each', '每颗石头一个图层（数量多，几百层）'], ['none', '不导出石头（只导出其余元素）']]],
     ['aeSaveAep', '脚本跑完后提示另存为 .aep', 'bool', true],
   ]],
-  ['导出 H5 试玩广告', [
+  ['导出 3D 动画（UE5 / C4D / Blender）', [
+    ['_export3d', '用上一次 AE 记录生成 glTF 场景 + Blender 脚本 + 音频', 'button', 'export3d', '导出 3D 动画 (glTF/FBX/Blender)'],
+    ['export3dFps', '3D 动画帧率', 'select', '30', [['24', '24'], ['25', '25'], ['30', '30'], ['60', '60']]],
+  ]],
+    ['导出 H5 试玩广告', [
     ['_exportH5', '导出当前设置为自包含 H5 试玩（无编辑器面板，仅游戏+CTA）', 'button', 'exportH5', '⬇ 导出 H5 试玩 ZIP'],
     ['h5Format', '渠道格式', 'select', ALL8, [[ALL8, '全部（AppLovin+Facebook+Google+Mintegral+Moloco+TikTok+Unity+Generic）'], ['tiktok,generic', 'TikTok + Generic'], ['applovin', '仅 AppLovin（MRAID）'], ['facebook', '仅 Facebook/Meta（≤2MB）'], ['google', '仅 Google Ads'], ['mintegral', '仅 Mintegral'], ['moloco', '仅 Moloco'], ['tiktok', '仅 TikTok/Pangle'], ['unity', '仅 Unity Ads（MRAID）'], ['generic', '仅 Generic 离线']]],
     ['h5Orientation', '试玩方向', 'select', '1', [['0', '双端 (0)'], ['1', '竖屏 (1)'], ['2', '横屏 (2)']]],

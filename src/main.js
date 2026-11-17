@@ -4,6 +4,7 @@ import { Game, DW, DH, GEO, PX, slotPos } from './game.js';
 import * as A from './art.js';
 import { Sfx } from './audio.js';
 import { createAERecorder } from './ae/recorder.js';
+import { export3D } from './export3d/export3d.js';
 import { buildSprites } from './ae/sprites.js';
 import { DEFAULT_HAND } from './default_hand.js';
 import { exportH5PlayableFromPage, applyPlayableMode, isPlayableNoHand, applyH5DevicePresetToSettings, markH5DeviceCustomIfSizeEdited, bindEditorDevicePreview } from './h5/index.js';
@@ -247,8 +248,16 @@ function aeStop() { const r = aeRec.rec; recClosed = true; updateAEButtons(); if
 async function aeStopAndExport() { const r = aeStop(); if (!r) { toast('没有记录到内容'); return null; } return doExportAE(true, r); }
 const curRec = () => aeActive() ? aeRec.rec : aeLastRec;
 function updateAEButtons() { const b = document.getElementById('btn_aeToggle'); if (!b) return; b.textContent = aeActive() ? `■ 停止并导出（${((now() - (aeRec.rec.t0 || now())) / 1000).toFixed(1)}s）` : '● 开始记录'; b.classList.toggle('on', aeActive()); }
+
+async function doExport3D(save = true, r0 = curRec()) {
+  if (!r0) { toast('请先用“● 开始记录”记录一段（自动通关或手动游玩）'); return null; }
+  status('正在生成 3D 动画…');
+  const ae = await aeRec.exportZip(r0, { aeFps: String(+S.export3dFps || 30), aeSize: 'canvas', aeSampling: 'bake', aeNames: 'en', aeAudio: 'both' });
+  const r = await export3D({ S: { ...((r0 && r0.S) || S), export3dFps: S.export3dFps }, ae, toolId: APP_ID });
+  window.__e3dLast = r; if (save) download(r.blob, r.name); status(`3D 动画：${r.stats.nodes} 节点，${r.duration.toFixed(2)}s`); return r;
+}
 async function doExportH5() { try { return await exportH5PlayableFromPage({ toolId: APP_ID, S, stripDataUrls: [DEFAULT_HAND], status, toast }); } catch (e) { status('H5 导出失败：' + e.message); console.error(e); return null; } }
-const PANEL_ACTIONS = { aeToggle: () => aeActive() ? aeStopAndExport() : recStart(), aeExport: () => doExportAE(), exportH5: () => doExportH5() };
+const PANEL_ACTIONS = { aeToggle: () => aeActive() ? aeStopAndExport() : recStart(), aeExport: () => doExportAE(), export3d: () => doExport3D(), exportH5: () => doExportH5() };
 function recTailDone(t) { if (!G) return false; const e = G.winT ?? failShowT(); return e != null && (G.t - e) * 1000 > (S.endCard ? S.endDelay + 400 : 0) + Math.max(800, S.tailSec * 1000); }
 function download(blob, name) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.textContent = `⬇ ${name} (${(blob.size / 1e6).toFixed(1)}MB)`; document.getElementById('recList').prepend(a); a.click(); }
 async function doExportAE(save = true, r0 = curRec()) {
@@ -310,6 +319,7 @@ function buildPanel() {
       det.append(row);
     });
     if (title.startsWith('手指')) det.insertAdjacentHTML('beforeend', '<div class="tip">默认手指 = 程序绘制的白手套（参考视频同款造型）。上传透明背景 PNG 可替换，用锚点 X/Y 标定指尖位置。自动通关会按当前目标盒颜色逐个点钉子；录制不会随自动通关自动开始（除非打开“自动录制”）。</div>');
+    if (title.startsWith('导出 3D')) det.insertAdjacentHTML('beforeend', '<div class="tip">复用 AE 记录（逐帧烘焙）。scene.glb 可直接导入 UE5 / C4D / Blender；FBX 由附带的 blender_import.py 在 Blender 里一键导出。</div>');
     if (title.startsWith('导出 H5')) det.insertAdjacentHTML('beforeend', '<div class="tip">试玩由玩家自己玩：导出包不含手指、默认不自动演示。预览与导出均按所选机型/自定义尺寸；选「自适应」才是全机型 contain/letterbox。</div>');
     if (title.startsWith('画布')) det.insertAdjacentHTML('beforeend', '<div class="tip">点和当前目标盒同色的钉子 → 钉子飞进盒子；装满换下一个盒子。木板失去钉子后按物理摆动 / 掉落，石头随之流下。倒计时到 0：压板塌下、小人被压、FAIL。</div>');
     body.append(det);
@@ -341,7 +351,7 @@ window.__game = {
   get G() { return G; }, get S() { return S; }, get view() { return view; }, get hand() { return hand; },
   autoSolve, newGame, tapAt, planTap, frameItems: () => frameItems(now()), get autoRunning() { return autoRunning; }, charPose,
   set(k, v) { S[k] = v; applyChange(k); buildPanel(); }, setMany(o) { Object.assign(S, o); saveSettings(S); buildPanel(); loadHand(); newGame(); },
-  doExportAE, doExportH5, aeStart: () => recStart(), aeStop: () => aeStop(), aeActive: () => aeActive(), startRec, stopRec, get mediaRec() { return rec; }, migrate, APP_ID, APP_VERSION, glove: () => glove,
+  doExportAE, doExport3D, doExportH5, aeStart: () => recStart(), aeStop: () => aeStop(), aeActive: () => aeActive(), startRec, stopRec, get mediaRec() { return rec; }, migrate, APP_ID, APP_VERSION, glove: () => glove,
 };
 buildPanel(); loadHand(); newGame(); window.__ready = true; requestAnimationFrame(loop);
 
